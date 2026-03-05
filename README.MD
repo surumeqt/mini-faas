@@ -17,3 +17,30 @@
 ```Bash
     pip install -r requirements.txt
 ```
+
+4. Run App
+
+```bash
+    python main.py
+```
+
+## Target Architecture
+
+```bash
+    Client
+    │
+    ▼
+    Flask Gateway
+    │
+    ├─ /deploy   → upload function
+    └─ /invoke   → run function
+            │
+            ▼
+    Function Registry
+            │
+            ▼
+    Docker Runtime
+            │
+            ▼
+    Function Container
+```
