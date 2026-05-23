@@ -1,0 +1,60 @@
+services:
+
+  gateway:
+
+    image: faas_gateway
+
+    build: .
+
+    ports:
+      - "5000:5000"
+
+    volumes:
+      - sangoku:/app/functions
+      - ./build:/app/build
+      - /var/run/docker.sock:/var/run/docker.sock
+
+    depends_on:
+      - mysql
+
+  mysql:
+
+    image: mysql:8
+
+    restart: always
+
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: faas_db
+
+    ports:
+      - "3307:3306"
+
+    volumes:
+      - sangoku_metadata:/var/lib/mysql
+      - ./mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  phpmyadmin:
+
+    image: phpmyadmin/phpmyadmin
+
+    restart: always
+
+    ports:
+      - "8080:80"
+
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      MYSQL_ROOT_PASSWORD: root
+
+    depends_on:
+      - mysql
+
+volumes:
+
+  sangoku:
+    external: true
+
+  sangoku_metadata:
+    external: true

@@ -1,13 +1,13 @@
 import os
 import subprocess
-import json
 
-REGISTRY_FILE = "registry.json"
+from gateway.database import get_connection
 
 
 def build_function(name, file_path):
 
     build_dir = f"build/{name}"
+
     os.makedirs(build_dir, exist_ok=True)
 
     handler_dst = f"{build_dir}/handler.py"
@@ -15,9 +15,11 @@ def build_function(name, file_path):
     with open(file_path, "rb") as src, open(handler_dst, "wb") as dst:
         dst.write(src.read())
 
-    dockerfile = f"""
+    dockerfile = """
 FROM python:3.11-slim
+
 WORKDIR /app
+
 COPY handler.py .
 
 CMD ["python","-c","import handler,sys,json;print(json.dumps(handler.handler(json.loads(sys.stdin.read()))))"]
@@ -36,18 +38,22 @@ CMD ["python","-c","import handler,sys,json;print(json.dumps(handler.handler(jso
         build_dir
     ])
 
-    update_registry(name, image_name)
+    save_metadata(name, image_name)
 
 
-def update_registry(name, image):
+def save_metadata(name, image):
 
-    if os.path.exists(REGISTRY_FILE):
-        with open(REGISTRY_FILE) as f:
-            registry = json.load(f)
-    else:
-        registry = {}
+    conn = get_connection()
 
-    registry[name] = image
+    cursor = conn.cursor()
 
-    with open(REGISTRY_FILE, "w") as f:
-        json.dump(registry, f, indent=2)
+    cursor.execute("""
+        INSERT INTO functions (name, image)
+        VALUES (%s, %s)
+        ON DUPLICATE KEY UPDATE image=%s
+    """, (name, image, image))
+
+    conn.commit()
+
+    cursor.close()
+    conn.close()
