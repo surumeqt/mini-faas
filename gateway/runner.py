@@ -27,70 +27,136 @@ def run_function(
 
     image = metadata["image"]
 
+    runtime = metadata["runtime"]
+
     entrypoint = metadata["entrypoint"]
 
     #
-    # SPLIT ENTRYPOINT
+    # PYTHON RUNTIME
     #
 
-    module_name, callable_name = (
-        entrypoint.split(".")
-    )
+    if runtime == "python":
 
-    #
-    # BUILD PYTHON EXECUTION SCRIPT
-    #
+        module_name, callable_name = (
+            entrypoint.split(".")
+        )
 
-    execution_script = f"""
+        execution_script = f"""
 import json
 import sys
 import importlib
 
-payload = json.loads(sys.stdin.read())
+payload = json.loads(
+    sys.stdin.read()
+)
 
-module = importlib.import_module("{module_name}")
+module = importlib.import_module(
+    "{module_name}"
+)
 
 target_function = getattr(
     module,
     "{callable_name}"
 )
 
-result = target_function(payload)
+result = target_function(
+    payload
+)
 
-print(json.dumps(result))
+print(
+    json.dumps(result)
+)
 """
 
-    #
-    # RUN CONTAINER
-    #
+        process = subprocess.run(
 
-    process = subprocess.run(
+            [
+                "docker",
+                "run",
+                "-i",
+                "--rm",
+                image,
+                "python",
+                "-c",
+                execution_script
+            ],
 
-        [
-            "docker",
-            "run",
-            "-i",
-            "--rm",
-            image,
-            "python",
-            "-c",
-            execution_script
-        ],
+            input=json.dumps(payload).encode(),
 
-        input=json.dumps(payload).encode(),
-
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE
-    )
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
 
     #
-    # HANDLE ERRORS
+    # NODE.JS RUNTIME
+    #
+
+    elif runtime == "node":
+
+        module_name, callable_name = (
+            entrypoint.split(".")
+        )
+
+        execution_script = f"""
+const fs = require('fs');
+
+const payload = JSON.parse(
+    fs.readFileSync(0, 'utf-8')
+);
+
+const mod = require('./{module_name}');
+
+const result = mod['{callable_name}'](
+    payload
+);
+
+console.log(
+    JSON.stringify(result)
+);
+"""
+
+        process = subprocess.run(
+
+            [
+                "docker",
+                "run",
+                "-i",
+                "--rm",
+                image,
+                "node",
+                "-e",
+                execution_script
+            ],
+
+            input=json.dumps(payload).encode(),
+
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
+
+    #
+    # UNKNOWN RUNTIME
+    #
+
+    else:
+
+        return {
+            "error": (
+                f"unsupported runtime: "
+                f"{runtime}"
+            )
+        }
+
+    #
+    # HANDLE EXECUTION ERRORS
     #
 
     if process.returncode != 0:
 
         return {
-            "error": process.stderr.decode()
+            "error": (
+                process.stderr.decode()
+            )
         }
 
     #
@@ -119,11 +185,14 @@ def get_function_metadata(
 
     conn = get_connection()
 
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor(
+        dictionary=True
+    )
 
     cursor.execute("""
         SELECT
             f.image,
+            f.runtime,
             fe.entrypoint
 
         FROM functions f
