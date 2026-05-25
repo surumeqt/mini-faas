@@ -4,6 +4,10 @@ CREATE TABLE IF NOT EXISTS functions (
 
     name VARCHAR(255) UNIQUE NOT NULL,
 
+    runtime VARCHAR(50) NOT NULL,
+
+    entrypoint VARCHAR(255) NOT NULL,
+
     image VARCHAR(255) NOT NULL,
 
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

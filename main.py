@@ -1,19 +1,20 @@
 from flask import Flask, request, jsonify
-import os
 
 from gateway.builder import build_function
+from gateway.normalizer import normalize_upload
 from gateway.runner import run_function
 
 app = Flask(__name__)
-
-
-FUNCTIONS_DIR = "/app/functions"
 
 
 @app.route("/deploy", methods=["POST"])
 def deploy():
 
     try:
+
+        #
+        # VALIDATION
+        #
 
         if "name" not in request.form:
             return jsonify({
@@ -25,17 +26,25 @@ def deploy():
                 "error": "missing function file"
             }), 400
 
+        #
+        # REQUEST DATA
+        #
+
         name = request.form["name"]
 
         file = request.files["file"]
 
-        os.makedirs(FUNCTIONS_DIR, exist_ok=True)
+        #
+        # NORMALIZE UPLOAD
+        #
 
-        path = f"{FUNCTIONS_DIR}/{name}.py"
+        project_path = normalize_upload(name, file)
 
-        file.save(path)
+        #
+        # BUILD FUNCTION
+        #
 
-        build_function(name, path)
+        build_function(name, project_path)
 
         return jsonify({
             "status": "deployed",
@@ -49,16 +58,24 @@ def deploy():
         }), 500
 
 
-@app.route("/invoke/<name>", methods=["POST"])
-def invoke(name):
+@app.route(
+    "/invoke/<deployment>/<function_name>",
+    methods=["POST"]
+)
+def invoke(deployment, function_name):
 
     try:
 
         payload = request.json or {}
 
-        result = run_function(name, payload)
+        result = run_function(
+            deployment,
+            function_name,
+            payload
+        )
 
         if "error" in result:
+
             return jsonify(result), 404
 
         return jsonify(result)
@@ -79,4 +96,8 @@ def health():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+
+    app.run(
+        host="0.0.0.0",
+        port=5000
+    )

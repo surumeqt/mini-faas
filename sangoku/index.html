@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sangoku | Serverless Functions for Developers</title>
+    <link rel="stylesheet" href="./css/index.css">
+</head>
+<body>
+
+    <!-- Navigation -->
+    <header class="navbar">
+        <div class="logo">SANGOKU</div>
+        <nav class="nav-links">
+            <a href="#features">Features</a>
+            <a href="#docs">Docs</a>
+            <a href="#pricing">Pricing</a>
+        </nav>
+        <div class="nav-cta">
+            <a href="#dashboard" class="btn btn-secondary">Console</a>
+            <a href="#signup" class="btn btn-primary">Sign Up</a>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-content">
+            <span class="badge">SANGOKU FAAS v1.0</span>
+            <h1>Deploy functions.<br>Scale instantly.</h1>
+            <p>The minimalist serverless platform built for high-performance applications. Write your logic, push code, and let us handle the infrastructure orchestration.</p>
+            <div class="hero-actions">
+                <a href="#get-started" class="btn btn-primary">Start Free</a>
+                <a href="#docs" class="btn btn-secondary">Read Docs</a>
+            </div>
+        </div>
+        <div class="hero-visual">
+            <div class="terminal-mockup">
+                <div class="terminal-header">
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                    <span class="terminal-title">sangoku-cli</span>
+                </div>
+                <div class="terminal-body">
+                    <p class="line"><span class="cmd">$</span> npm install -g sangoku</p>
+                    <p class="line"><span class="cmd">$</span> sangoku deploy ./api/hello.py </p>
+                    <p class="line success">✓ Function deployed successfully!</p>
+                    <p class="line dim">https://api.sangoku.dev/v1/hello</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Metrics Section -->
+    <section class="metrics">
+        <div class="metric-card">
+            <h3>0ms</h3>
+            <p>Cold Start Latency</p>
+        </div>
+        <div class="metric-card">
+            <h3>99.99%</h3>
+            <p>Guaranteed Uptime</p>
+        </div>
+        <div class="metric-card">
+            <h3>1M</h3>
+            <p>Free Requests / Mo</p>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="features">
+        <div class="section-header">
+            <h2>Engineered for Velocity</h2>
+            <p>Everything you need to ship serverless applications without the cloud complexity.</p>
+        </div>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">✦</div>
+                <h3>Instant Provisioning</h3>
+                <p>Your functions are alive the millisecond an HTTP request hits our edge network. No idling servers.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">✦</div>
+                <h3>Polyglot Runtime</h3>
+                <p>Native support for Node.js, Python, Go, Rust, and C++. Bring your own binaries anytime.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">✦</div>
+                <h3>Git-Ops Workflow</h3>
+                <p>Connect your GitHub repository. Every `git push` creates a production-ready immutable deployment.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>&copy; 2026 Sangoku Inc. All rights reserved.</p>
+        <div class="footer-links">
+            <a href="#status">Status</a>
+            <a href="#terms">Terms</a>
+            <a href="#privacy">Privacy</a>
+        </div>
+    </footer>
+
+</body>
+</html>

@@ -1,32 +1,57 @@
-import os
 import subprocess
 
+from gateway.detector import detect_runtime
 from gateway.database import get_connection
+from gateway.parser import parse_python_functions
 
 
-def build_function(name, file_path):
+TEMPLATES_DIR = "/app/gateway/templates"
 
-    build_dir = f"build/{name}"
 
-    os.makedirs(build_dir, exist_ok=True)
+def build_function(name, project_path):
 
-    handler_dst = f"{build_dir}/handler.py"
+    #
+    # DETECT RUNTIME
+    #
 
-    with open(file_path, "rb") as src, open(handler_dst, "wb") as dst:
-        dst.write(src.read())
+    runtime = detect_runtime(project_path)
 
-    dockerfile = """
-FROM python:3.11-slim
+    #
+    # SELECT TEMPLATE
+    #
 
-WORKDIR /app
+    if runtime == "python":
 
-COPY handler.py .
+        template_path = (
+            f"{TEMPLATES_DIR}/python.Dockerfile"
+        )
 
-CMD ["python","-c","import handler,sys,json;print(json.dumps(handler.handler(json.loads(sys.stdin.read()))))"]
-"""
+    elif runtime == "node":
 
-    with open(f"{build_dir}/Dockerfile", "w") as f:
-        f.write(dockerfile)
+        template_path = (
+            f"{TEMPLATES_DIR}/node.Dockerfile"
+        )
+
+    else:
+        raise Exception("unsupported runtime")
+
+    #
+    # COPY DOCKERFILE TEMPLATE
+    #
+
+    with open(template_path, "r") as src:
+
+        dockerfile_content = src.read()
+
+    dockerfile_path = f"{project_path}/Dockerfile"
+
+    with open(dockerfile_path, "w") as dst:
+
+        dst.write(dockerfile_content)
+
+    #
+    # BUILD IMAGE
+    #
 
     image_name = f"faas_{name}"
 
@@ -35,23 +60,117 @@ CMD ["python","-c","import handler,sys,json;print(json.dumps(handler.handler(jso
         "build",
         "-t",
         image_name,
-        build_dir
-    ])
+        project_path
+    ], check=True)
 
-    save_metadata(name, image_name)
+    #
+    # SAVE MAIN FUNCTION METADATA
+    #
+
+    function_id = save_function_metadata(
+        name=name,
+        runtime=runtime,
+        image=image_name
+    )
+
+    #
+    # PARSE PYTHON FUNCTIONS
+    #
+
+    if runtime == "python":
+
+        handler_path = f"{project_path}/handler.py"
+
+        parsed_functions = (
+            parse_python_functions(handler_path)
+        )
+
+        #
+        # SAVE EACH FUNCTION ENTRYPOINT
+        #
+
+        for function_name in parsed_functions:
+
+            entrypoint = (
+                f"handler.{function_name}"
+            )
+
+            save_function_entrypoint(
+                function_id=function_id,
+                function_name=function_name,
+                entrypoint=entrypoint
+            )
 
 
-def save_metadata(name, image):
+def save_function_metadata(name, runtime, image):
 
     conn = get_connection()
 
     cursor = conn.cursor()
 
     cursor.execute("""
-        INSERT INTO functions (name, image)
-        VALUES (%s, %s)
-        ON DUPLICATE KEY UPDATE image=%s
-    """, (name, image, image))
+        INSERT INTO functions (
+            name,
+            runtime,
+            image
+        )
+        VALUES (%s, %s, %s)
+
+        ON DUPLICATE KEY UPDATE
+            runtime=%s,
+            image=%s
+    """, (
+        name,
+        runtime,
+        image,
+        runtime,
+        image
+    ))
+
+    conn.commit()
+
+    #
+    # GET FUNCTION ID
+    #
+
+    cursor.execute("""
+        SELECT id
+        FROM functions
+        WHERE name=%s
+    """, (name,))
+
+    result = cursor.fetchone()
+
+    function_id = result[0]
+
+    cursor.close()
+    conn.close()
+
+    return function_id
+
+
+def save_function_entrypoint(
+    function_id,
+    function_name,
+    entrypoint
+):
+
+    conn = get_connection()
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        INSERT INTO function_entrypoints (
+            function_id,
+            function_name,
+            entrypoint
+        )
+        VALUES (%s, %s, %s)
+    """, (
+        function_id,
+        function_name,
+        entrypoint
+    ))
 
     conn.commit()
 
