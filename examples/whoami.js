@@ -1,3 +1,5 @@
-const whoami = () => {
-  return "I am the whoami function";
+function whoami () {
+  return {message: "I am the whoami function"};
 };
+
+module.exports = whoami;

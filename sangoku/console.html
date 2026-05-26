@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sangoku | Developer Console</title>
+    <link rel="stylesheet" href="./css/index.css">
+    <link rel="stylesheet" href="./css/console.css">
+</head>
+
+<body>
+
+    <!-- Navigation -->
+    <header class="navbar">
+        <div class="logo">SANGOKU</div>
+        <nav class="nav-links">
+            <!-- <a href="index.html">Home</a>
+            <a href="console.html" class="active">Console</a> -->
+        </nav>
+        <div class="nav-cta">
+            <a href="index.html" class="btn btn-primary">Home</a>
+        </div>
+    </header>
+
+    <!-- Dashboard Container -->
+    <main class="dashboard-container">
+
+        <!-- Deploy Card -->
+        <section class="console-card">
+            <h2>✦ Deploy Function</h2>
+            <p class="card-subtitle">Upload your Python (.py), Node.js (.js), or zipped project (.zip) to deploy
+                instantly.</p>
+
+            <form id="deploy-form" class="console-card-form" onsubmit="handleDeploy(event)">
+                <div class="form-group">
+                    <label for="deploy-name">Deployment Name</label>
+                    <input type="text" id="deploy-name" class="form-input" placeholder="e.g. math-service" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Function Package</label>
+                    <div class="file-upload-wrapper">
+                        <input type="file" id="deploy-file" class="file-upload-input" accept=".py,.js,.zip" required
+                            onchange="handleFileChange(event)">
+                        <div class="file-upload-trigger" id="file-trigger-text">
+                            <span>Drop file here or click to browse</span>
+                            <span class="dim" style="font-size: 0.8rem;">Supports .py, .js, or .zip</span>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" id="deploy-btn" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;">
+                    Deploy to Gateway
+                </button>
+            </form>
+
+            <div class="console-output">
+                <div class="terminal-mockup">
+                    <div class="terminal-header">
+                        <span class="dot" style="background-color: #ff5f56;"></span>
+                        <span class="dot" style="background-color: #ffbd2e;"></span>
+                        <span class="dot" style="background-color: #27c93f;"></span>
+                        <span class="terminal-title">deploy-logs</span>
+                        <a href="#" onclick="clearTerminal('deploy-terminal', event)"
+                            style="margin-left: 10px; font-size: 0.7rem; color: var(--text-dim);">Clear</a>
+                    </div>
+                    <div class="terminal-body" id="deploy-terminal">
+                        <p class="line dim">[system] Terminal ready. Awaiting deployment request...</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Invoke Card -->
+        <section class="console-card">
+            <h2>✦ Invoke Function</h2>
+            <p class="card-subtitle">Send an execution trigger to any active serverless function deployment.</p>
+
+            <form id="invoke-form" class="console-card-form" onsubmit="handleInvoke(event)">
+                <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <label for="invoke-deployment">Deployment Name</label>
+                        <input type="text" id="invoke-deployment" class="form-input" placeholder="e.g. math-service"
+                            required>
+                    </div>
+                    <div>
+                        <label for="invoke-function">Function Name</label>
+                        <input type="text" id="invoke-function" class="form-input" placeholder="e.g. add" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="invoke-payload">Payload (JSON)</label>
+                    <textarea id="invoke-payload" class="form-input" placeholder='{\n  "a": 5,\n  "b": 10\n}'
+                        required>{}</textarea>
+                </div>
+
+                <button type="submit" id="invoke-btn" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;">
+                    Invoke Function
+                </button>
+            </form>
+
+            <div class="console-output">
+                <div class="terminal-mockup">
+                    <div class="terminal-header">
+                        <span class="dot" style="background-color: #ff5f56;"></span>
+                        <span class="dot" style="background-color: #ffbd2e;"></span>
+                        <span class="dot" style="background-color: #27c93f;"></span>
+                        <span class="terminal-title">execution-output</span>
+                        <a href="#" onclick="clearTerminal('invoke-terminal', event)"
+                            style="margin-left: 10px; font-size: 0.7rem; color: var(--text-dim);">Clear</a>
+                    </div>
+                    <div class="terminal-body" id="invoke-terminal">
+                        <p class="line dim">[system] Terminal ready. Awaiting invocation trigger...</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>&copy; 2026 Sangoku Inc. All rights reserved.</p>
+        <div class="footer-links">
+            <a href="#status">Status</a>
+            <a href="#terms">Terms</a>
+            <a href="#privacy">Privacy</a>
+        </div>
+    </footer>
+
+    <script>
+        // Resolve target API endpoint based on deployment environment
+        function getApiUrl(path) {
+            const base = window.location.origin.startsWith('file') ? 'http://localhost:5000' : '';
+            return `${base}${path}`;
+        }
+
+        // Format terminal lines
+        function appendTerminalLine(terminalId, text, type = 'info') {
+            const terminal = document.getElementById(terminalId);
+            const line = document.createElement('p');
+            line.className = `line ${type}`;
+
+            const timestamp = new Date().toLocaleTimeString();
+            line.innerHTML = `<span class="dim">[${timestamp}]</span> ${text}`;
+
+            terminal.appendChild(line);
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        // Clear terminal output
+        function clearTerminal(terminalId, event) {
+            if (event) event.preventDefault();
+            const terminal = document.getElementById(terminalId);
+            terminal.innerHTML = `<p class="line dim">[system] Terminal cleared.</p>`;
+        }
+
+        // Handle file change display feedback
+        function handleFileChange(event) {
+            const fileInput = event.target;
+            const triggerText = document.getElementById('file-trigger-text');
+
+            if (fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                triggerText.innerHTML = `
+                    <span style="color: #ffffff; font-weight: 500;">✓ ${file.name}</span>
+                    <span class="dim" style="font-size: 0.8rem;">Ready to deploy (${(file.size / 1024).toFixed(2)} KB)</span>
+                `;
+                triggerText.style.borderColor = '#ffffff';
+            } else {
+                triggerText.innerHTML = `
+                    <span>Drop file here or click to browse</span>
+                    <span class="dim" style="font-size: 0.8rem;">Supports .py, .js, or .zip</span>
+                `;
+                triggerText.style.borderColor = 'var(--border-color)';
+            }
+        }
+
+        // Handle deploy submit
+        async function handleDeploy(event) {
+            event.preventDefault();
+
+            const nameInput = document.getElementById('deploy-name');
+            const fileInput = document.getElementById('deploy-file');
+            const deployBtn = document.getElementById('deploy-btn');
+            const name = nameInput.value.trim();
+            const file = fileInput.files[0];
+
+            if (!name || !file) return;
+
+            // Start loading state
+            deployBtn.disabled = true;
+            deployBtn.innerHTML = `<span class="spinner"></span> Deploying...`;
+
+            appendTerminalLine('deploy-terminal', `Initiating deployment for function: <strong>${name}</strong>...`, 'info');
+            appendTerminalLine('deploy-terminal', `Uploading package: <strong>${file.name}</strong> (${(file.size / 1024).toFixed(2)} KB)...`, 'info');
+
+            const formData = new FormData();
+            formData.append('name', name);
+            formData.append('file', file);
+
+            try {
+                const response = await fetch(getApiUrl('/deploy'), {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    appendTerminalLine('deploy-terminal', `✓ Deployment successful!`, 'success');
+                    appendTerminalLine('deploy-terminal', `Function is now registered under name: <strong style="color: #30d158;">${data.function}</strong>`, 'success');
+                    appendTerminalLine('deploy-terminal', `You can now invoke function entrypoints in this deployment.`, 'info');
+
+                    // Auto-fill deployment name in invocation panel for excellent UX
+                    document.getElementById('invoke-deployment').value = data.function;
+                    appendTerminalLine('invoke-terminal', `Auto-populated deployment name with: <strong>${data.function}</strong>`, 'warning');
+
+                    // Clear the file upload input
+                    fileInput.value = '';
+                    handleFileChange({ target: fileInput });
+                } else {
+                    appendTerminalLine('deploy-terminal', `✗ Deployment failed: ${data.error || 'Unknown error'}`, 'error');
+                }
+            } catch (err) {
+                appendTerminalLine('deploy-terminal', `✗ Gateway connection error: ${err.message}`, 'error');
+                appendTerminalLine('deploy-terminal', `Make sure the backend is running at http://localhost:5000`, 'warning');
+            } finally {
+                // End loading state
+                deployBtn.disabled = false;
+                deployBtn.innerHTML = `Deploy to Gateway`;
+            }
+        }
+
+        // Handle invoke submit
+        async function handleInvoke(event) {
+            event.preventDefault();
+
+            const deploymentInput = document.getElementById('invoke-deployment');
+            const functionInput = document.getElementById('invoke-function');
+            const payloadInput = document.getElementById('invoke-payload');
+            const invokeBtn = document.getElementById('invoke-btn');
+
+            const deployment = deploymentInput.value.trim();
+            const functionName = functionInput.value.trim();
+            const payloadText = payloadInput.value.trim();
+
+            if (!deployment || !functionName) return;
+
+            let payload = {};
+            try {
+                payload = JSON.parse(payloadText || '{}');
+            } catch (err) {
+                appendTerminalLine('invoke-terminal', `✗ Invalid JSON payload: ${err.message}`, 'error');
+                return;
+            }
+
+            // Start loading state
+            invokeBtn.disabled = true;
+            invokeBtn.innerHTML = `<span class="spinner"></span> Invoking...`;
+
+            appendTerminalLine('invoke-terminal', `Invoking: <strong>${deployment}</strong> → <strong>${functionName}</strong>`, 'info');
+            appendTerminalLine('invoke-terminal', `Payload: <code>${JSON.stringify(payload)}</code>`, 'dim');
+
+            try {
+                const response = await fetch(getApiUrl(`/invoke/${deployment}/${functionName}`), {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    if (data.error) {
+                        appendTerminalLine('invoke-terminal', `✗ Execution Error: ${data.error}`, 'error');
+                    } else {
+                        appendTerminalLine('invoke-terminal', `✓ Execution Completed.`, 'success');
+                        appendTerminalLine('invoke-terminal', `Result: <pre style="margin-top: 5px; color: #30d158;">${JSON.stringify(data, null, 2)}</pre>`, 'success');
+                    }
+                } else {
+                    appendTerminalLine('invoke-terminal', `✗ Invocation failed: ${data.error || 'Server error'}`, 'error');
+                }
+            } catch (err) {
+                appendTerminalLine('invoke-terminal', `✗ Connection error: ${err.message}`, 'error');
+                appendTerminalLine('invoke-terminal', `Make sure the backend is running at http://localhost:5000`, 'warning');
+            } finally {
+                // End loading state
+                invokeBtn.disabled = false;
+                invokeBtn.innerHTML = `Invoke Function`;
+            }
+        }
+
+        // Set default format placeholder
+        document.getElementById('invoke-payload').value = JSON.stringify({ a: 5, b: 10 }, null, 2);
+    </script>
+</body>
+
+</html>

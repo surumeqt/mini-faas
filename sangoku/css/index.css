@@ -29,14 +29,18 @@ body {
 }
 
 /* --- Layout Utility --- */
-header, section, footer {
+header,
+section,
+footer {
     max-width: 1200px;
     margin: 0 auto;
     padding: 2rem;
 }
 
 /* --- Typography & Buttons --- */
-h1, h2, h3 {
+h1,
+h2,
+h3 {
     font-weight: 700;
     letter-spacing: -0.03em;
 }
@@ -160,7 +164,7 @@ a:hover {
     border-radius: 6px;
     font-family: var(--font-mono);
     font-size: 0.85rem;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
 }
 
 .terminal-header {
@@ -302,18 +306,22 @@ a:hover {
         gap: 3rem;
         padding: 4rem 2rem;
     }
+
     .features-grid {
         grid-template-columns: 1fr;
     }
+
     .metrics {
         flex-direction: column;
         gap: 2rem;
     }
+
     .navbar {
         flex-direction: column;
         gap: 1.5rem;
         text-align: center;
     }
+
     .nav-links {
         margin: 0.5rem 0;
     }

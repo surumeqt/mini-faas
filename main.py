@@ -4,7 +4,28 @@ from gateway.builder import build_function
 from gateway.normalizer import normalize_upload
 from gateway.runner import run_function
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder="sangoku", static_url_path="")
+
+
+@app.before_request
+def handle_options():
+    if request.method == "OPTIONS":
+        response = jsonify({"status": "ok"})
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+        response.headers["Access-Control-Allow-Methods"] = "POST, GET, OPTIONS"
+        response.headers["Access-Control-Allow-Private-Network"] = "true"
+        return response
+
+
+@app.after_request
+def add_cors_headers(response):
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    response.headers["Access-Control-Allow-Methods"] = "POST, GET, OPTIONS"
+    response.headers["Access-Control-Allow-Private-Network"] = "true"
+    return response
+
 
 
 @app.route("/deploy", methods=["POST"])
