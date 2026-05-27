@@ -1,5 +1,10 @@
-function whoami () {
-  return {message: "I am the whoami function"};
-};
+function hello(event) {
+    const name = event.name
+    return {
+        message: "hello " + name
+    };
+}
 
-module.exports = whoami;
+module.exports = {
+    hello
+};

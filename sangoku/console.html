@@ -131,12 +131,6 @@
     </footer>
 
     <script>
-        // Resolve target API endpoint based on deployment environment
-        function getApiUrl(path) {
-            const base = window.location.origin.startsWith('file') ? 'http://localhost:5000' : '';
-            return `${base}${path}`;
-        }
-
         // Format terminal lines
         function appendTerminalLine(terminalId, text, type = 'info') {
             const terminal = document.getElementById(terminalId);
@@ -202,7 +196,7 @@
             formData.append('file', file);
 
             try {
-                const response = await fetch(getApiUrl('/deploy'), {
+                const response = await fetch('http://localhost:5000/deploy', {
                     method: 'POST',
                     body: formData
                 });
@@ -265,7 +259,7 @@
             appendTerminalLine('invoke-terminal', `Payload: <code>${JSON.stringify(payload)}</code>`, 'dim');
 
             try {
-                const response = await fetch(getApiUrl(`/invoke/${deployment}/${functionName}`), {
+                const response = await fetch(`http://localhost:5000/invoke/${deployment}/${functionName}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
