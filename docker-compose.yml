@@ -54,7 +54,5 @@ services:
 volumes:
 
   sangoku:
-    external: true
 
   sangoku_metadata:
-    external: true

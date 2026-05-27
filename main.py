@@ -87,7 +87,7 @@ def invoke(deployment, function_name):
 
     try:
 
-        payload = request.json or {}
+        payload = request.get_json(force=True, silent=True) or {}
 
         result = run_function(
             deployment,

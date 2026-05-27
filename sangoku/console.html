@@ -243,6 +243,9 @@
 
             if (!deployment || !functionName) return;
 
+            // Clear terminal output before every invocation
+            clearTerminal('invoke-terminal');
+
             let payload = {};
             try {
                 payload = JSON.parse(payloadText || '{}');
@@ -274,7 +277,45 @@
                         appendTerminalLine('invoke-terminal', `✗ Execution Error: ${data.error}`, 'error');
                     } else {
                         appendTerminalLine('invoke-terminal', `✓ Execution Completed.`, 'success');
-                        appendTerminalLine('invoke-terminal', `Result: <pre style="margin-top: 5px; color: #30d158;">${JSON.stringify(data, null, 2)}</pre>`, 'success');
+                        
+                        if (data.image) {
+                            // Create a copy of the data with a shortened image string for display
+                            const displayData = { ...data };
+                            displayData.image = "<base64 encoded image data>";
+                            
+                            appendTerminalLine('invoke-terminal', `Result: <pre style="margin-top: 5px; color: #30d158;">${JSON.stringify(displayData, null, 2)}</pre>`, 'success');
+                            
+                            // Create preview container element
+                            const terminal = document.getElementById('invoke-terminal');
+                            const previewDiv = document.createElement('div');
+                            previewDiv.className = 'line success';
+                            
+                            const timestamp = new Date().toLocaleTimeString();
+                            previewDiv.innerHTML = `
+                                <span class="dim">[${timestamp}]</span>
+                                <div style="margin-top: 10px; border: 1px solid var(--border-color); border-radius: 6px; padding: 12px; background: #0c0c0c; display: inline-flex; flex-direction: column; align-items: center; gap: 10px; max-width: 100%;">
+                                    <div style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 500; align-self: flex-start;">✦ Output Image Preview:</div>
+                                    <img src="data:image/png;base64,${data.image}" style="max-width: 100%; max-height: 250px; display: block; border-radius: 4px; border: 1px solid #222;" />
+                                    <button class="btn btn-primary download-btn" style="padding: 0.4rem 1.2rem; font-size: 0.75rem; white-space: normal; text-align: center;">Download Image</button>
+                                </div>
+                            `;
+                            
+                            // Attach event listener using closure to avoid large string interpolation errors
+                            const downloadBtn = previewDiv.querySelector('.download-btn');
+                            downloadBtn.addEventListener('click', () => {
+                                const link = document.createElement('a');
+                                link.href = `data:image/png;base64,${data.image}`;
+                                link.download = `${deployment}_${functionName}.png`;
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                            });
+                            
+                            terminal.appendChild(previewDiv);
+                            terminal.scrollTop = terminal.scrollHeight;
+                        } else {
+                            appendTerminalLine('invoke-terminal', `Result: <pre style="margin-top: 5px; color: #30d158;">${JSON.stringify(data, null, 2)}</pre>`, 'success');
+                        }
                     }
                 } else {
                     appendTerminalLine('invoke-terminal', `✗ Invocation failed: ${data.error || 'Server error'}`, 'error');

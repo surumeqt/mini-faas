@@ -27,6 +27,7 @@
     flex-direction: column;
     gap: 1.5rem;
     transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    min-width: 0;
 }
 
 .console-card:hover {
@@ -154,6 +155,8 @@ textarea.form-input {
     height: 100%;
     min-height: 200px;
     max-height: 350px;
+    min-width: 0;
+    width: 100%;
 }
 
 .console-output .terminal-body {
@@ -164,6 +167,17 @@ textarea.form-input {
     background-color: #050505;
     border-bottom-left-radius: 5px;
     border-bottom-right-radius: 5px;
+    min-width: 0;
+}
+
+.console-output .terminal-body pre {
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-family: inherit;
+    font-size: inherit;
+    color: inherit;
+    margin: 0;
+    max-width: 100%;
 }
 
 .console-output .line {
