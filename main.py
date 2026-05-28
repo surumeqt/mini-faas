@@ -87,7 +87,25 @@ def invoke(deployment, function_name):
 
     try:
 
-        payload = request.get_json(force=True, silent=True) or {}
+        if request.files or request.form:
+            payload = {}
+            for key in request.form:
+                payload[key] = request.form[key]
+            
+            files_list = []
+            for file_key in request.files:
+                for file in request.files.getlist(file_key):
+                    if file.filename:
+                        import base64
+                        file_data = file.read()
+                        encoded_data = base64.b64encode(file_data).decode("utf-8")
+                        files_list.append({
+                            "name": file.filename,
+                            "content": encoded_data
+                        })
+            payload["files"] = files_list
+        else:
+            payload = request.get_json(force=True, silent=True) or {}
 
         result = run_function(
             deployment,

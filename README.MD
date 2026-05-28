@@ -1,4 +1,4 @@
-# SANGOKU - A Mini FaaS Platform
+# SANGOKU - A Super Mini FaaS Platform
 
 A lightweight Function-as-a-Service (FaaS) platform built using:
 

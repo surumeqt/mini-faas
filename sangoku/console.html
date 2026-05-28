@@ -90,10 +90,27 @@
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label for="invoke-payload">Payload (JSON)</label>
+                <div class="form-group" id="payload-json-group">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <label for="invoke-payload">Payload (JSON)</label>
+                        <a href="#" id="toggle-payload-mode" onclick="togglePayloadMode(true, event)" style="font-size: 0.75rem; color: var(--text-secondary); text-decoration: underline;">Switch to File Upload</a>
+                    </div>
                     <textarea id="invoke-payload" class="form-input" placeholder='{\n  "a": 5,\n  "b": 10\n}'
                         required>{}</textarea>
+                </div>
+
+                <div class="form-group" id="payload-file-group" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <label>Files Payload</label>
+                        <a href="#" id="toggle-payload-mode-back" onclick="togglePayloadMode(false, event)" style="font-size: 0.75rem; color: var(--text-secondary); text-decoration: underline;">Switch to JSON</a>
+                    </div>
+                    <div class="file-upload-wrapper">
+                        <input type="file" id="invoke-files" class="file-upload-input" multiple onchange="handleInvokeFilesChange(event)">
+                        <div class="file-upload-trigger" id="invoke-file-trigger-text">
+                            <span>Drop files here or click to browse</span>
+                            <span class="dim" style="font-size: 0.8rem;">Supports multiple files</span>
+                        </div>
+                    </div>
                 </div>
 
                 <button type="submit" id="invoke-btn" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;">
@@ -228,6 +245,63 @@
             }
         }
 
+        let currentPayloadModeIsFile = false;
+
+        function togglePayloadMode(isFile, event) {
+            if (event) event.preventDefault();
+            currentPayloadModeIsFile = isFile;
+            
+            const jsonGroup = document.getElementById('payload-json-group');
+            const fileGroup = document.getElementById('payload-file-group');
+            const payloadInput = document.getElementById('invoke-payload');
+            const filesInput = document.getElementById('invoke-files');
+
+            if (isFile) {
+                jsonGroup.style.display = 'none';
+                payloadInput.removeAttribute('required');
+                fileGroup.style.display = 'block';
+                filesInput.setAttribute('required', 'required');
+            } else {
+                jsonGroup.style.display = 'block';
+                payloadInput.setAttribute('required', 'required');
+                fileGroup.style.display = 'none';
+                filesInput.removeAttribute('required');
+            }
+        }
+
+        function handleInvokeFilesChange(event) {
+            const fileInput = event.target;
+            const triggerText = document.getElementById('invoke-file-trigger-text');
+
+            if (fileInput.files.length > 0) {
+                const count = fileInput.files.length;
+                let filesInfo = `${count} file(s) selected`;
+                if (count === 1) {
+                    filesInfo = `✓ ${fileInput.files[0].name}`;
+                }
+                triggerText.innerHTML = `
+                    <span style="color: #ffffff; font-weight: 500;">${filesInfo}</span>
+                    <span class="dim" style="font-size: 0.8rem;">Ready to upload (${(Array.from(fileInput.files).reduce((acc, f) => acc + f.size, 0) / 1024).toFixed(2)} KB total)</span>
+                `;
+                triggerText.style.borderColor = '#ffffff';
+            } else {
+                triggerText.innerHTML = `
+                    <span>Drop files here or click to browse</span>
+                    <span class="dim" style="font-size: 0.8rem;">Supports multiple files</span>
+                `;
+                triggerText.style.borderColor = 'var(--border-color)';
+            }
+        }
+
+        // Event listener for auto-switching payload mode when function contains "zip", "grey", "greyscale", or "image"
+        document.getElementById('invoke-function').addEventListener('input', (event) => {
+            const funcName = event.target.value.trim().toLowerCase();
+            const shouldBeFileMode = funcName.includes('zip') || funcName.includes('grey') || funcName.includes('image');
+            if (shouldBeFileMode !== currentPayloadModeIsFile) {
+                togglePayloadMode(shouldBeFileMode);
+            }
+        });
+
         // Handle invoke submit
         async function handleInvoke(event) {
             event.preventDefault();
@@ -235,39 +309,56 @@
             const deploymentInput = document.getElementById('invoke-deployment');
             const functionInput = document.getElementById('invoke-function');
             const payloadInput = document.getElementById('invoke-payload');
+            const filesInput = document.getElementById('invoke-files');
             const invokeBtn = document.getElementById('invoke-btn');
 
             const deployment = deploymentInput.value.trim();
             const functionName = functionInput.value.trim();
-            const payloadText = payloadInput.value.trim();
 
             if (!deployment || !functionName) return;
 
             // Clear terminal output before every invocation
             clearTerminal('invoke-terminal');
 
-            let payload = {};
-            try {
-                payload = JSON.parse(payloadText || '{}');
-            } catch (err) {
-                appendTerminalLine('invoke-terminal', `✗ Invalid JSON payload: ${err.message}`, 'error');
-                return;
+            let body;
+            let headers = {};
+
+            if (currentPayloadModeIsFile) {
+                if (filesInput.files.length === 0) {
+                    appendTerminalLine('invoke-terminal', `✗ Error: No files selected for upload.`, 'error');
+                    return;
+                }
+                const formData = new FormData();
+                for (let i = 0; i < filesInput.files.length; i++) {
+                    formData.append('files', filesInput.files[i]);
+                }
+                body = formData;
+                appendTerminalLine('invoke-terminal', `Invoking: <strong>${deployment}</strong> → <strong>${functionName}</strong> (File Upload Mode)`, 'info');
+                appendTerminalLine('invoke-terminal', `Uploading ${filesInput.files.length} file(s)...`, 'dim');
+            } else {
+                const payloadText = payloadInput.value.trim();
+                let payload = {};
+                try {
+                    payload = JSON.parse(payloadText || '{}');
+                } catch (err) {
+                    appendTerminalLine('invoke-terminal', `✗ Invalid JSON payload: ${err.message}`, 'error');
+                    return;
+                }
+                body = JSON.stringify(payload);
+                headers['Content-Type'] = 'application/json';
+                appendTerminalLine('invoke-terminal', `Invoking: <strong>${deployment}</strong> → <strong>${functionName}</strong>`, 'info');
+                appendTerminalLine('invoke-terminal', `Payload: <code>${JSON.stringify(payload)}</code>`, 'dim');
             }
 
             // Start loading state
             invokeBtn.disabled = true;
             invokeBtn.innerHTML = `<span class="spinner"></span> Invoking...`;
 
-            appendTerminalLine('invoke-terminal', `Invoking: <strong>${deployment}</strong> → <strong>${functionName}</strong>`, 'info');
-            appendTerminalLine('invoke-terminal', `Payload: <code>${JSON.stringify(payload)}</code>`, 'dim');
-
             try {
                 const response = await fetch(`http://localhost:5000/invoke/${deployment}/${functionName}`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(payload)
+                    headers: headers,
+                    body: body
                 });
 
                 const data = await response.json();
@@ -278,7 +369,68 @@
                     } else {
                         appendTerminalLine('invoke-terminal', `✓ Execution Completed.`, 'success');
                         
-                        if (data.image) {
+                        if (data.zip_file) {
+                            // Display zip details
+                            const displayData = { ...data };
+                            displayData.zip_file = "<base64 encoded zip data>";
+                            appendTerminalLine('invoke-terminal', `Result: <pre style="margin-top: 5px; color: #30d158;">${JSON.stringify(displayData, null, 2)}</pre>`, 'success');
+                            
+                            // Pop up/trigger browser download automatically
+                            const zipData = data.zip_file;
+                            const filename = data.filename || 'archive.zip';
+                            
+                            const byteCharacters = atob(zipData);
+                            const byteNumbers = new Array(byteCharacters.length);
+                            for (let i = 0; i < byteCharacters.length; i++) {
+                                byteNumbers[i] = byteCharacters.charCodeAt(i);
+                            }
+                            const byteArray = new Uint8Array(byteNumbers);
+                            const blob = new Blob([byteArray], {type: 'application/zip'});
+                            
+                            const link = document.createElement('a');
+                            link.href = URL.createObjectURL(blob);
+                            link.download = filename;
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                            
+                            appendTerminalLine('invoke-terminal', `✓ Automatic download triggered for: <strong>${filename}</strong>`, 'success');
+
+                            // Create beautiful preview / download card
+                            const terminal = document.getElementById('invoke-terminal');
+                            const downloadDiv = document.createElement('div');
+                            downloadDiv.className = 'line success';
+                            
+                            const timestamp = new Date().toLocaleTimeString();
+                            downloadDiv.innerHTML = `
+                                <span class="dim">[${timestamp}]</span>
+                                <div style="margin-top: 10px; border: 1px solid var(--border-color); border-radius: 6px; padding: 12px; background: #0c0c0c; display: inline-flex; flex-direction: column; align-items: center; gap: 10px; min-width: 250px;">
+                                    <div style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 500; align-self: flex-start;">✦ Output Zip File:</div>
+                                    <div style="display: flex; align-items: center; gap: 12px; background: #161616; padding: 8px 16px; border-radius: 4px; width: 100%; border: 1px solid #222;">
+                                        <span style="font-size: 1.5rem;">📦</span>
+                                        <div style="text-align: left;">
+                                            <div style="font-weight: 500; font-size: 0.85rem; color: #fff;">${filename}</div>
+                                            <div style="font-size: 0.7rem; color: var(--text-secondary);">${(blob.size / 1024).toFixed(2)} KB</div>
+                                        </div>
+                                    </div>
+                                    <button class="btn btn-primary redownload-btn" style="padding: 0.4rem 1.2rem; font-size: 0.75rem; width: 100%;">Download Zip Again</button>
+                                </div>
+                            `;
+                            
+                            const redownloadBtn = downloadDiv.querySelector('.redownload-btn');
+                            redownloadBtn.addEventListener('click', () => {
+                                const link = document.createElement('a');
+                                link.href = URL.createObjectURL(blob);
+                                link.download = filename;
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                            });
+                            
+                            terminal.appendChild(downloadDiv);
+                            terminal.scrollTop = terminal.scrollHeight;
+
+                        } else if (data.image) {
                             // Create a copy of the data with a shortened image string for display
                             const displayData = { ...data };
                             displayData.image = "<base64 encoded image data>";
